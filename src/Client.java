@@ -9,7 +9,6 @@ import java.util.Scanner;
 
 import javax.swing.JOptionPane;
 
-
 public class Client {
     private Socket socket;
     private BufferedReader bufferedReader;   

@@ -166,7 +166,6 @@ public class ClientGUI {
         }).start();
     }
     
-
     public void subscribeToTopic() {
         String topic = JOptionPane.showInputDialog(frame, "Enter topic to subscribe:");
         if (topic != null && !topic.isEmpty()) {

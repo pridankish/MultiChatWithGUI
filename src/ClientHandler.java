@@ -44,40 +44,38 @@ public class ClientHandler implements Runnable {
     }
 
     @Override
-public void run() {
-    String messageFromClient;
+    public void run() {
+        String messageFromClient;
 
-    try {
-        while ((messageFromClient = bufferedReader.readLine()) != null) {
-            if (messageFromClient.startsWith("CREATE:")) {
-                String topic = messageFromClient.substring("CREATE:".length());
-                server.createTopic(topic); // Вызываем метод createTopic из класса Server
-                bufferedWriter.write("CREATED:" + topic);
-                bufferedWriter.newLine();
-                bufferedWriter.flush();
-            } else if (messageFromClient.startsWith("SUBSCRIBE:")) {
-                String topic = messageFromClient.substring("SUBSCRIBE:".length());
-                subscribeToTopic(topic);
-                bufferedWriter.write("SUBSCRIBED:" + topic);
-                bufferedWriter.newLine();
-                bufferedWriter.flush();
-            } else {
-                broadcastTopicMessage(messageFromClient);
+        try {
+            while ((messageFromClient = bufferedReader.readLine()) != null) {
+                if (messageFromClient.startsWith("CREATE:")) {
+                    String topic = messageFromClient.substring("CREATE:".length());
+                    server.createTopic(topic); // Вызываем метод createTopic из класса Server
+                    bufferedWriter.write("CREATED:" + topic);
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+                } else if (messageFromClient.startsWith("SUBSCRIBE:")) {
+                    String topic = messageFromClient.substring("SUBSCRIBE:".length());
+                    subscribeToTopic(topic);
+                    bufferedWriter.write("SUBSCRIBED:" + topic);
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+                } else {
+                    broadcastTopicMessage(messageFromClient);
+                }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    } catch (IOException e) {
-        e.printStackTrace();
     }
-}
-
-
 
     public void broadcastTopicMessage(String message) {
         String[] parts = message.split(":");
         if (parts.length >= 2) {
             String topicName = parts[0].trim();
             String messageContent = message.substring(topicName.length() + 1);
-            Topic topic = server.getTopic(topicName);
+            Topic topic = server.getTopic(topicName.substring(0));
 
             if (topic != null) {
                 topic.broadcastMessage(clientUsername + ": " + messageContent);
