@@ -50,6 +50,33 @@ public class ClientGUI {
         frame.add(messageArea, BorderLayout.CENTER);
         frame.add(textField, BorderLayout.SOUTH);
 
+        JPanel toPanel = new JPanel();
+        toPanel.setLayout(new FlowLayout());
+
+        JButton createButton = new JButton("Create Topic");
+        createButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                createTopic();
+                } catch (IOException er) {
+                    er.printStackTrace();
+                }
+            }
+        });
+        toPanel.add(createButton);
+
+        JButton subscribeButton = new JButton("Subscribe to Topic");
+        subscribeButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            subscribeToTopic();
+        }
+        });
+        toPanel.add(subscribeButton);
+
+        frame.add(toPanel, BorderLayout.NORTH);
+
         // Отображение фрейма
         frame.setVisible(true);
 
@@ -62,7 +89,7 @@ public class ClientGUI {
             bufferedWriter.newLine();
             bufferedWriter.flush();
 
-            listenForMessage();
+            listenForTopicSubscriptions();
 
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -73,17 +100,44 @@ public class ClientGUI {
 
     // Отправка сообщений ClientHandler'у
     public void sendMessage() {
-        try {
+        String topic = JOptionPane.showInputDialog(frame, "Enter topic for your message: ");
+        if (topic != null && !topic.isEmpty()) {
             String messageToSend = textField.getText();
-            bufferedWriter.write(username + ": " + messageToSend);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
-            textField.setText("");
+            if (!messageToSend.isEmpty()) {
+                try {
+                    bufferedWriter.write(messageToSend);
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+                    textField.setText("");
 
-            messageArea.append("You: " + messageToSend + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
+                    // Добавляем собственное сообщение в текстовую область
+                    messageArea.append(username + ": " + messageToSend + "\n");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+    }
+
+    public void listenForTopicSubscriptions() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String topics = bufferedReader.readLine();
+                    String[] topicsToSubscribe = topics.split(",");
+
+                    for (String topic : topicsToSubscribe) {
+                        bufferedWriter.write("SUBSCRIBE: " + topic.trim() + "\n");
+                        bufferedWriter.flush();
+                    }
+
+                    listenForMessage();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     public void listenForMessage() {
@@ -91,11 +145,19 @@ public class ClientGUI {
             @Override
             public void run() {
                 String msgFromGroupChat;
-
+    
                 while (socket.isConnected()) {
                     try {
                         msgFromGroupChat = bufferedReader.readLine();
-                        messageArea.append(msgFromGroupChat + "\n");
+                        if (msgFromGroupChat.startsWith("CREATED:")) {
+                            String topic = msgFromGroupChat.substring("CREATED:".length());
+                            JOptionPane.showMessageDialog(frame, "Topic created: " + topic);
+                        } else if (msgFromGroupChat.startsWith("SUBSCRIBED:")) {
+                            String topic = msgFromGroupChat.substring("SUBSCRIBED:".length());
+                            JOptionPane.showMessageDialog(frame, "Subscribed to topic: " + topic);
+                        } else {
+                            messageArea.append(msgFromGroupChat + "\n");
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -103,10 +165,37 @@ public class ClientGUI {
             }
         }).start();
     }
+    
+
+    public void subscribeToTopic() {
+        String topic = JOptionPane.showInputDialog(frame, "Enter topic to subscribe:");
+        if (topic != null && !topic.isEmpty()) {
+            try {
+                bufferedWriter.write("SUBSCRIBE:" + topic);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void createTopic() throws IOException {
+        String topic = JOptionPane.showInputDialog(frame, "Enter topic name to create:");
+        bufferedWriter.flush();
+        if (topic != null && !topic.isEmpty()) {
+            try {
+                bufferedWriter.write("CREATE:" + topic);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     public static void main(String[] args) throws UnknownHostException, IOException {
         String username = JOptionPane.showInputDialog(null, "Enter your username for the group chat: ");
         new ClientGUI(username);
     }
 }
-
